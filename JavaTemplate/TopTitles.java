@@ -188,7 +188,7 @@ public class TopTitles extends Configured implements Tool {
         @Override
         public void reduce(NullWritable key, Iterable<TextArrayWritable> values, Context context) throws IOException, InterruptedException {
             for (TextArrayWritable val : values) {
-                Text[] pair = (Text[]) val.toArray();
+                Writable[] pair = (Writable[]) []) val.toArray();
                 String word = pair[0].toString();
                 Integer count = Integer.parseInt(pair[1].toString());
 
