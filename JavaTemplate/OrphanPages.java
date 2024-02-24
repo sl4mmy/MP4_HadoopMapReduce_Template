@@ -59,7 +59,7 @@ public class OrphanPages extends Configured implements Tool {
 
             final StringTokenizer pageIdTokenizer = new StringTokenizer(linkedPageIds, " ");
             while (pageIdTokenizer.hasMoreTokens()) {
-                final String pageIdToken = linksTokenizer.nextToken().trim();
+                final String pageIdToken = pageIdTokenizer.nextToken().trim();
                 if (pageIdToken.isEmpty()) {
                     continue;
                 }
