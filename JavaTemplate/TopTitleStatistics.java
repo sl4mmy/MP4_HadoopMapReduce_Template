@@ -219,9 +219,9 @@ public class TopTitleStatistics extends Configured implements Tool {
 
             context.write(new Text("Mean"), new IntWritable(mean));
             context.write(new Text("Sum"), new IntWritable(sum));
-            context.write(new Text("Minimum"), new IntWritable(min));
-            context.write(new Text("Maximum"), new IntWritable(max));
-            context.write(new Text("Variance"), new IntWritable((int) Math.floor(var)));
+            context.write(new Text("Min"), new IntWritable(min));
+            context.write(new Text("Max"), new IntWritable(max));
+            context.write(new Text("Var"), new IntWritable((int) Math.floor(var)));
         }
     }
 
