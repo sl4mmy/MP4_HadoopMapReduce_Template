@@ -59,7 +59,12 @@ public class OrphanPages extends Configured implements Tool {
 
             final StringTokenizer pageIdTokenizer = new StringTokenizer(linkedPageIds, " ");
             while (pageIdTokenizer.hasMoreTokens()) {
-                final Integer linkedPageId = Integer.parseInt(linksTokenizer.nextToken().trim());
+                final String pageIdToken = linksTokenizer.nextToken().trim();
+                if (pageIdToken.isEmpty()) {
+                    continue;
+                }
+
+                final Integer linkedPageId = Integer.parseInt(pageIdToken);
                 if (!currentPageId.equals(linkedPageId)) {
                     context.write(new IntWritable(linkedPageId), new IntWritable(1)); // pass this output to reducer
                 }
