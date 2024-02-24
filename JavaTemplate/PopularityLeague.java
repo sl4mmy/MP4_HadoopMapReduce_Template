@@ -208,8 +208,8 @@ public class PopularityLeague extends Configured implements Tool {
             leagueRankings.sort(Comparator.reverseOrder());
 
             for (Pair<Integer, Integer> item : leagueRankings) {
-                IntWritable pageId = new IntWritable(item.second);
-                IntWritable leagueRank = new IntWritable(item.first);
+                IntWritable pageId = new IntWritable(item.first);
+                IntWritable leagueRank = new IntWritable(item.second);
                 context.write(pageId, leagueRank); // print as final output
             }
         }
