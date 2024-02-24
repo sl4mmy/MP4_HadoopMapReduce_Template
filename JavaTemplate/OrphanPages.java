@@ -47,16 +47,37 @@ public class OrphanPages extends Configured implements Tool {
     public static class LinkCountMap extends Mapper<Object, Text, IntWritable, IntWritable> {
         @Override
         public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
-            //TODO
-            //context.write(<IntWritable>, <IntWritable>); // pass this output to reducer
+            final String delimiters = ":";
+
+            final String line = value.toString();
+            final StringTokenizer linksTokenizer = new StringTokenizer(line, delimiters);
+
+            final Integer currentPageId = Integer.parseInt(linksTokenizer.nextToken().trim());
+            context.write(new IntWritable(currentPageId), new IntWritable(0));
+
+            final String linkedPageIds = linksTokenizer.nextToken().trim();
+
+            final StringTokenizer pageIdTokenizer = new StringTokenizer(linkedPageIds, " ");
+            while (pageIdTokenizer.hasMoreTokens()) {
+                final Integer linkedPageId = Integer.parseInt(linksTokenizer.nextToken().trim());
+                if (!currentPageId.equals(linkedPageId)) {
+                    context.write(new IntWritable(linkedPageId), new IntWritable(1)); // pass this output to reducer
+                }
+            }
         }
     }
 
     public static class OrphanPageReduce extends Reducer<IntWritable, IntWritable, IntWritable, NullWritable> {
         @Override
         public void reduce(IntWritable key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
-            //TODO
-            //context.write(<IntWritable>, <NullWritable>); // print as final output
+            int incomingLinkCount = 0;
+            for (IntWritable value : values) {
+                incomingLinkCount += value.get();
+            }
+
+            if (incomingLinkCount == 0) {
+                context.write(key, NullWritable.get());
+            }
         }
     }
 }
