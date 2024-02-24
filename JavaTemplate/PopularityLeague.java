@@ -191,13 +191,18 @@ public class PopularityLeague extends Configured implements Tool {
         public void reduce(NullWritable key, Iterable<IntArrayWritable> values, Context context) throws IOException, InterruptedException {
             int lowerRankings = 0;
             int previousCount = -1;
+            int currentSkipCount = 0;
             for (IntArrayWritable val : values) {
                 Writable[] pair = (Writable[]) val.toArray();
                 Integer pageId = Integer.parseInt(pair[0].toString());
                 Integer linkCount = Integer.parseInt(pair[1].toString());
 
                 if (previousCount != -1 && linkCount > previousCount) {
-                    lowerRankings += 1;
+                    lowerRankings += 1 + currentSkipCount;
+
+                    currentSkipCount = 0;
+                } else if (linkCount == previousCount) {
+                    currentSkipCount++;
                 }
 
                 leagueRankings.add(new Pair<Integer, Integer>(pageId, lowerRankings));
