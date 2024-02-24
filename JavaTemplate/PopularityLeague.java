@@ -47,15 +47,15 @@ public class PopularityLeague extends Configured implements Tool {
         jobA.setJarByClass(PopularityLeague.class);
         jobA.waitForCompletion(true);
 
-        Job jobB = Job.getInstance(conf, "Top Links");
+        Job jobB = Job.getInstance(conf, "League Popularity");
         jobB.setOutputKeyClass(IntWritable.class);
         jobB.setOutputValueClass(IntWritable.class);
 
         jobB.setMapOutputKeyClass(NullWritable.class);
         jobB.setMapOutputValueClass(IntArrayWritable.class);
 
-        jobB.setMapperClass(TopLinksMap.class);
-        jobB.setReducerClass(TopLinksReduce.class);
+        jobB.setMapperClass(PopularityLeagueMap.class);
+        jobB.setReducerClass(PopularityLeagueReduce.class);
         jobB.setNumReduceTasks(1);
 
         FileInputFormat.setInputPaths(jobB, tmpPath);
@@ -151,7 +151,7 @@ public class PopularityLeague extends Configured implements Tool {
         }
     }
 
-    public static class TopLinksMap extends Mapper<Text, Text, NullWritable, IntArrayWritable> {
+    public static class PopularityLeagueMap extends Mapper<Text, Text, NullWritable, IntArrayWritable> {
         private TreeSet<Pair<Integer, Integer>> countToPageId = new TreeSet<Pair<Integer, Integer>>();
 
         @Override
@@ -178,7 +178,7 @@ public class PopularityLeague extends Configured implements Tool {
         }
     }
 
-    public static class TopLinksReduce extends Reducer<NullWritable, IntArrayWritable, IntWritable, IntWritable> {
+    public static class PopularityLeagueReduce extends Reducer<NullWritable, IntArrayWritable, IntWritable, IntWritable> {
         private List<Pair<Integer, Integer>> leagueRankings = new ArrayList<>();
 
         @Override
