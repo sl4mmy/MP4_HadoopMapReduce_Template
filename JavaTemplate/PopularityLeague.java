@@ -170,7 +170,8 @@ public class PopularityLeague extends Configured implements Tool {
         @Override
         protected void cleanup(Context context) throws IOException, InterruptedException {
             //Cleanup operation starts after all mappers are finished
-            for (Pair<Integer, Integer> item : countToPageId) {
+            final List<Pair<Integer, Integer>> tmp = countToPageId.stream().toList().reversed();
+            for (Pair<Integer, Integer> item : tmp) {
                 Integer[] strings = {item.second, item.first};
                 IntArrayWritable val = new IntArrayWritable(strings);
                 context.write(NullWritable.get(), val); // pass this output to reducer
