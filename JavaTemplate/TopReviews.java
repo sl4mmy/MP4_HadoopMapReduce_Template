@@ -50,7 +50,7 @@ public class TopReviews extends Configured implements Tool {
 
         Job jobA = Job.getInstance(conf, "Review Count");
         jobA.setOutputKeyClass(Text.class);
-        jobA.setOutputValueClass(DoubleWritable.class);
+        jobA.setOutputValueClass(IntWritable.class);
 
         jobA.setMapperClass(ReviewCountMap.class);
         jobA.setReducerClass(ReviewCountReduce.class);
