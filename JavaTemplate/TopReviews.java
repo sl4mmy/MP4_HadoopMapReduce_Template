@@ -190,7 +190,7 @@ public class TopReviews extends Configured implements Tool {
                 count++;
             }
 
-            final double mean = count > 0 ? sum / count : 0.0;
+            final double mean = count > 0 ? sum / (1.0 * count) : 0.0;
 
             context.write(key, new DoubleWritable(mean));
         }
