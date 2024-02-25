@@ -5,11 +5,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.ArrayWritable;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.DoubleWritable;
-import org.apache.hadoop.io.NullWritable;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
@@ -49,22 +45,41 @@ public class TopReviews extends Configured implements Tool {
         Configuration conf = this.getConf();
 
         FileSystem fs = FileSystem.get(conf);
-        Path tmpPath = new Path("./preF-output");
+        Path tmpPath = new Path("./preF-output"); // new Path("./tmp");
+        fs.delete(tmpPath, true);
 
-        //Job jobA = ...
-		//configure jobA
-        //FileInputFormat.setInputPaths(jobA, new Path(args[0]));
-        //FileOutputFormat.setOutputPath(jobA, tmpPath);
-		//run jobA
-		//...
+        Job jobA = Job.getInstance(conf, "Review Count");
+        jobA.setOutputKeyClass(Text.class);
+        jobA.setOutputValueClass(DoubleWritable.class);
 
-        //Job jobB = ...
-		//configure jobB
-		//FileInputFormat.setInputPaths(jobB, tmpPath);
-        //FileOutputFormat.setOutputPath(jobB, new Path(args[1]));
+        jobA.setMapperClass(ReviewCountMap.class);
+        jobA.setReducerClass(ReviewCountReduce.class);
 
-        return 0;
-        //return jobB.waitForCompletion(true) ? 0 : 1;
+        FileInputFormat.setInputPaths(jobA, new Path(args[0]));
+        FileOutputFormat.setOutputPath(jobA, tmpPath);
+
+        jobA.setJarByClass(TopReviews.class);
+        jobA.waitForCompletion(true);
+
+        Job jobB = Job.getInstance(conf, "Top Reviews");
+        jobB.setOutputKeyClass(Text.class);
+        jobB.setOutputValueClass(IntWritable.class);
+
+        jobB.setMapOutputKeyClass(NullWritable.class);
+        jobB.setMapOutputValueClass(TextArrayWritable.class);
+
+        jobB.setMapperClass(TopReviewsMap.class);
+        jobB.setReducerClass(TopReviewsReduce.class);
+        jobB.setNumReduceTasks(1);
+
+        FileInputFormat.setInputPaths(jobB, tmpPath);
+        FileOutputFormat.setOutputPath(jobB, new Path(args[1]));
+
+        jobB.setInputFormatClass(KeyValueTextInputFormat.class);
+        jobB.setOutputFormatClass(TextOutputFormat.class);
+
+        jobB.setJarByClass(TopReviews.class);
+        return jobB.waitForCompletion(true) ? 0 : 1;
     }
 
     public static String readHDFSFile(String path, Configuration conf) throws IOException{
@@ -113,17 +128,61 @@ public class TopReviews extends Configured implements Tool {
             this.delimiters = readHDFSFile(delimitersPath, conf);
         }
 
+        // {
+        //   "review_id":"oyaMhzBSwfGgemSGuZCdwQ",
+        //   "user_id":"Dd1jQj7S-BFGqRbApFzCFw",
+        //   "business_id":"YtSqYv1Q_pOltsVPSx54SA",
+        //   "stars":5,
+        //   "useful":0,
+        //   "funny":0,
+        //   "cool":0,
+        //   "text":"Tremendous service (Big shout out to Douglas) that complemented the delicious food. Pretty expensive establishment (40-50$ avg for your main course), but its definitely backs that up with an atmosphere that's comparable with any of the top tier restaurants across the country.",
+        //   "date":1372072885000
+        // }
         @Override
         public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
             //Calculate scores and pass along with business_id to the reducer
-            //context.write(new Text(business_id), new IntWritable(weight * stars));
+            final String line = value.toString();
+
+            final JSONObject json = new JSONObject(value);
+
+            final String business_id = json.getString("business_id");
+            final int stars = json.getInt("stars") - 3;  // Subtract 3 to scale rating from 1-5 star to -2 - 2
+
+            if (stars == 0) {
+                context.write(new Text(business_id), new IntWritable(0));
+
+                return;
+            }
+
+            final String review = json.getString("text");
+
+            int weight = 0;
+            final StringTokenizer tokenizer = new StringTokenizer(review, delimiters);
+            while (tokenizer.hasMoreTokens()) {
+                final String nextToken = tokenizer.nextToken().trim().toLowerCase();
+                if (!stopWords.contains(nextToken)) {
+                    weight++;
+                }
+            }
+
+            context.write(new Text(business_id), new IntWritable(weight * stars));
         }
     }
 
     public static class ReviewCountReduce extends Reducer<Text, IntWritable, Text, DoubleWritable> {
         @Override
         public void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
-            //Output average scores
+            int count = 0;
+            int sum = 0;
+            for (IntWritable value : values) {
+                sum += value.get();
+                count++;
+            }
+
+            final double mean = count > 0 ? sum / count : 0.0;
+
+            context.write(key, new DoubleWritable(mean));
         }
     }
 
@@ -140,12 +199,23 @@ public class TopReviews extends Configured implements Tool {
         @Override
         public void map(Text key, Text value, Context context) throws IOException, InterruptedException {
             //Calculate weighted review score for each business ID, keeping the count of map <=N
+            final Double mean = Double.parseDouble(value.toString());
+            final String business_id = key.toString();
+
+            countToReviewMap.add(new Pair<Double, String>(mean, business_id));
+            if (countToReviewMap.size() > 10) {
+                countToReviewMap.remove(countToReviewMap.first());
+            }
         }
 
         @Override
         protected void cleanup(Context context) throws IOException, InterruptedException {
             //output the entries of the map
-            //context.write(NullWritable.get(), entry);
+            for (Pair<Double, String> item : countToReviewMap) {
+                String[] strings = {item.second, item.first.toString()};
+                TextArrayWritable val = new TextArrayWritable(strings);
+                context.write(NullWritable.get(), val); // pass this output to reducer
+            }
         }
     }
 
@@ -161,8 +231,21 @@ public class TopReviews extends Configured implements Tool {
 
         @Override
         public void reduce(NullWritable key, Iterable<TextArrayWritable> values, Context context) throws IOException, InterruptedException {
-            //TODO - output top 10 business_id 
-            //context.write(business_id, NullWritable.get());
+            for (TextArrayWritable val : values) {
+                Writable[] pair = (Writable[]) val.toArray();
+                final String business_id = pair[0].toString();
+                final Double mean = Double.parseDouble(pair[1].toString());
+
+                countToReviewMap.add(new Pair<Double, String>(mean, business_id));
+                if (countToReviewMap.size() > 10) {
+                    countToReviewMap.remove(countToReviewMap.first());
+                }
+            }
+
+            for (Pair<Double, String> item : countToReviewMap) {
+                Text business_id = new Text(item.second);
+                context.write(business_id, NullWritable.get()); // print as final output
+            }
         }
     }
 }
