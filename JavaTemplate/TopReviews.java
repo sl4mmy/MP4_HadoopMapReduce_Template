@@ -116,6 +116,8 @@ public class TopReviews extends Configured implements Tool {
         List<String> stopWords;
         String delimiters;
 
+        int lines = 0;
+
         @Override
         protected void setup(Context context) throws IOException,InterruptedException {
 
@@ -143,6 +145,7 @@ public class TopReviews extends Configured implements Tool {
         public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
             //Calculate scores and pass along with business_id to the reducer
             final String line = value.toString();
+            lines++;
 
             try {
                 final JSONObject json = new JSONObject(value);
@@ -169,7 +172,7 @@ public class TopReviews extends Configured implements Tool {
 
                 context.write(new Text(business_id), new IntWritable(weight * stars));
             } catch (JSONException e) {
-                System.err.println("line was \"" + line + "\"");
+                System.err.println("line " + lines + " was \"" + line + "\"");
 
                 throw e;
             }
