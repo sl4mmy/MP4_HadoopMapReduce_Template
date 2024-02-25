@@ -162,6 +162,10 @@ public class TopReviews extends Configured implements Tool {
                 final StringTokenizer tokenizer = new StringTokenizer(review, delimiters);
                 while (tokenizer.hasMoreTokens()) {
                     final String nextToken = tokenizer.nextToken().trim().toLowerCase();
+                    if (nextToken.isEmpty()) {
+                        continue;
+                    }
+
                     if (!stopWords.contains(nextToken)) {
                         weight++;
                     }
