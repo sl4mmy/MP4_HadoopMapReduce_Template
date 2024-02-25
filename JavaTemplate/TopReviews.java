@@ -144,29 +144,35 @@ public class TopReviews extends Configured implements Tool {
             //Calculate scores and pass along with business_id to the reducer
             final String line = value.toString();
 
-            final JSONObject json = new JSONObject(value);
+            try {
+                final JSONObject json = new JSONObject(value);
 
-            final String business_id = json.getString("business_id");
-            final int stars = json.getInt("stars") - 3;  // Subtract 3 to scale rating from 1-5 star to -2 - 2
+                final String business_id = json.getString("business_id");
+                final int stars = json.getInt("stars") - 3;  // Subtract 3 to scale rating from 1-5 star to -2 - 2
 
-            if (stars == 0) {
-                context.write(new Text(business_id), new IntWritable(0));
+                if (stars == 0) {
+                    context.write(new Text(business_id), new IntWritable(0));
 
-                return;
-            }
-
-            final String review = json.getString("text");
-
-            int weight = 0;
-            final StringTokenizer tokenizer = new StringTokenizer(review, delimiters);
-            while (tokenizer.hasMoreTokens()) {
-                final String nextToken = tokenizer.nextToken().trim().toLowerCase();
-                if (!stopWords.contains(nextToken)) {
-                    weight++;
+                    return;
                 }
-            }
 
-            context.write(new Text(business_id), new IntWritable(weight * stars));
+                final String review = json.getString("text");
+
+                int weight = 0;
+                final StringTokenizer tokenizer = new StringTokenizer(review, delimiters);
+                while (tokenizer.hasMoreTokens()) {
+                    final String nextToken = tokenizer.nextToken().trim().toLowerCase();
+                    if (!stopWords.contains(nextToken)) {
+                        weight++;
+                    }
+                }
+
+                context.write(new Text(business_id), new IntWritable(weight * stars));
+            } catch (JSONException e) {
+                System.err.println("line was \"" + line + "\"");
+
+                throw e;
+            }
         }
     }
 
