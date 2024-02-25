@@ -248,7 +248,9 @@ public class TopReviews extends Configured implements Tool {
                 }
             }
 
-            for (Pair<Double, String> item : countToReviewMap) {
+            // Output in descending order
+            final List<Pair<Double, String>> tmp = countToReviewMap.stream().toList().reversed();
+            for (Pair<Double, String> item : tmp) {
                 Text business_id = new Text(item.second);
                 context.write(business_id, NullWritable.get()); // print as final output
             }
